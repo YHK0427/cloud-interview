@@ -1,4 +1,9 @@
-from flask import Blueprint, render_template, request, jsonify
+import io
+import os
+import wave
+from google import genai
+from google.genai import types
+from flask import Blueprint, render_template, request, jsonify, Response
 from models import db, Question, Answer
 from services.gemini_service import get_feedback
 
@@ -65,3 +70,39 @@ def generate_feedback():
     db.session.commit()
 
     return jsonify({'feedback': feedback_text})
+
+
+@interview_bp.route('/api/tts', methods=['POST'])
+def text_to_speech():
+    data = request.get_json()
+    text = data.get('text', '')
+    if not text:
+        return jsonify({'error': '텍스트가 없습니다.'}), 400
+
+    try:
+        client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY', ''))
+        response = client.models.generate_content(
+            model='gemini-2.5-flash-preview-tts',
+            contents=text,
+            config=types.GenerateContentConfig(
+                response_modalities=['AUDIO'],
+                speech_config=types.SpeechConfig(
+                    voice_config=types.VoiceConfig(
+                        prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                            voice_name='Kore',
+                        )
+                    )
+                ),
+            )
+        )
+        pcm_data = response.candidates[0].content.parts[0].inline_data.data
+        buffer = io.BytesIO()
+        with wave.open(buffer, 'wb') as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(24000)
+            wf.writeframes(pcm_data)
+        buffer.seek(0)
+        return Response(buffer.read(), mimetype='audio/wav')
+    except Exception as e:
+        return jsonify({'error': f'TTS 생성 실패: {str(e)}'}), 500

@@ -18,6 +18,9 @@ const nextBtn = document.getElementById('next-btn');
 const listenBtn = document.getElementById('listen-btn');
 const recordBtn = document.getElementById('record-btn');
 const stopBtn = document.getElementById('stop-btn');
+const revealBtn = document.getElementById('reveal-btn');
+const questionHiddenMsg = document.getElementById('question-hidden-msg');
+let questionRevealed = false;
 
 // 질문 목록 로드
 fetch(`/api/questions/${SESSION_NO}`)
@@ -29,18 +32,22 @@ fetch(`/api/questions/${SESSION_NO}`)
 
 function showQuestion() {
     if (currentIndex >= questions.length) {
-        questionText.textContent = '모든 질문이 완료되었습니다!';
-        categoryBadge.style.display = 'none';
-        document.querySelector('.answer-section').style.display = 'none';
+        // 면접 완료
+        document.querySelector('.question-card').style.display = 'none';
+        document.querySelector('.answer-card').style.display = 'none';
         resultSection.style.display = 'none';
 
         const container = document.querySelector('.interview-container');
         const doneDiv = document.createElement('div');
         doneDiv.className = 'done-section';
         doneDiv.innerHTML = `
-            <p>면접 연습이 끝났습니다.</p>
-            <a href="/history" class="btn btn-primary btn-lg">히스토리 보기</a>
-            <a href="/" class="btn btn-secondary btn-lg">새 면접 시작</a>
+            <span class="done-icon">&#10003;</span>
+            <p>면접 연습 완료</p>
+            <p class="done-sub">모든 질문에 답변했습니다</p>
+            <div class="done-actions">
+                <a href="/history" class="btn btn-primary btn-lg">히스토리 보기</a>
+                <a href="/" class="btn btn-secondary btn-lg">새 면접 시작</a>
+            </div>
         `;
         container.appendChild(doneDiv);
         return;
@@ -49,7 +56,13 @@ function showQuestion() {
     const q = questions[currentIndex];
     questionText.textContent = q.question;
     categoryBadge.textContent = q.category;
-    categoryBadge.style.display = 'inline-block';
+    categoryBadge.style.display = 'inline-flex';
+
+    // 질문 텍스트 숨김 (실제 면접처럼)
+    questionRevealed = false;
+    questionText.style.display = 'none';
+    questionHiddenMsg.style.display = 'block';
+    revealBtn.textContent = '질문 텍스트 보기';
 
     const progress = ((currentIndex + 1) / questions.length) * 100;
     progressFill.style.width = progress + '%';
@@ -62,12 +75,11 @@ function showQuestion() {
     feedbackText.textContent = '';
     feedbackBtn.disabled = false;
     feedbackBtn.textContent = '피드백 보기';
-    document.querySelector('.answer-section').style.display = 'block';
+    document.querySelector('.answer-card').style.display = 'block';
     recordBtn.disabled = false;
     stopBtn.disabled = true;
     listenBtn.disabled = false;
 
-    // 마지막 문제면 버튼 텍스트 변경
     if (currentIndex === questions.length - 1) {
         nextBtn.textContent = '면접 완료';
     } else {
@@ -75,13 +87,58 @@ function showQuestion() {
     }
 }
 
-// TTS - 질문 듣기
+// 질문 텍스트 토글
+revealBtn.addEventListener('click', function() {
+    questionRevealed = !questionRevealed;
+    if (questionRevealed) {
+        questionText.style.display = 'block';
+        questionHiddenMsg.style.display = 'none';
+        revealBtn.textContent = '질문 텍스트 숨기기';
+    } else {
+        questionText.style.display = 'none';
+        questionHiddenMsg.style.display = 'block';
+        revealBtn.textContent = '질문 텍스트 보기';
+    }
+});
+
+// TTS - 질문 듣기 (Gemini TTS)
+let ttsAudio = null;
+
 listenBtn.addEventListener('click', function() {
-    speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(questions[currentIndex].question);
-    utterance.lang = 'ko-KR';
-    utterance.rate = 0.9;
-    speechSynthesis.speak(utterance);
+    // 이전 재생 중지
+    if (ttsAudio) {
+        ttsAudio.pause();
+        ttsAudio = null;
+    }
+
+    listenBtn.disabled = true;
+    listenBtn.textContent = '음성 생성 중...';
+
+    fetch('/api/tts', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({text: questions[currentIndex].question})
+    })
+    .then(res => {
+        if (!res.ok) throw new Error('TTS 생성 실패');
+        return res.blob();
+    })
+    .then(blob => {
+        const url = URL.createObjectURL(blob);
+        ttsAudio = new Audio(url);
+        ttsAudio.play();
+        listenBtn.textContent = '질문 듣기';
+        listenBtn.disabled = false;
+        ttsAudio.onended = () => {
+            URL.revokeObjectURL(url);
+            ttsAudio = null;
+        };
+    })
+    .catch(err => {
+        console.error('TTS 오류:', err);
+        listenBtn.textContent = '질문 듣기';
+        listenBtn.disabled = false;
+    });
 });
 
 // STT - 답변하기
@@ -170,12 +227,13 @@ stopBtn.addEventListener('click', function() {
 // 모범 답안 토글
 modelAnswerToggle.addEventListener('click', function() {
     const text = modelAnswerText;
+    const icon = modelAnswerToggle.querySelector('.collapsible-icon');
     if (text.style.display === 'none') {
         text.style.display = 'block';
-        modelAnswerToggle.textContent = '모범 답안 ▲';
+        modelAnswerToggle.classList.add('open');
     } else {
         text.style.display = 'none';
-        modelAnswerToggle.textContent = '모범 답안 ▼';
+        modelAnswerToggle.classList.remove('open');
     }
 });
 
@@ -206,8 +264,8 @@ feedbackBtn.addEventListener('click', function() {
 
 // 다음 질문
 nextBtn.addEventListener('click', function() {
-    speechSynthesis.cancel();
+    if (ttsAudio) { ttsAudio.pause(); ttsAudio = null; }
     currentIndex++;
     showQuestion();
-    window.scrollTo(0, 0);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 });

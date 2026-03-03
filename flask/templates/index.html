@@ -1,18 +1,21 @@
 {% extends "base.html" %}
 
-{% block title %}면접 시작 - 클라우드 면접 연습{% endblock %}
+{% block title %}Cloud Interview{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h1>클라우드 면접 연습</h1>
-    <p>카테고리를 선택하고 면접을 시작하세요</p>
+    <h1>Cloud <span class="accent">Interview</span></h1>
+    <p>카테고리를 선택하고 면접 연습을 시작하세요</p>
 </div>
 
 <div class="category-section">
-    <h2>카테고리 선택</h2>
-    <p class="hint">복수 선택 가능 - 선택한 카테고리 비율에 맞춰 10문제가 출제됩니다</p>
-    <div id="category-list" class="category-grid">
-        <p class="loading">카테고리를 불러오는 중...</p>
+    <div class="card">
+        <div class="section-label">Select Categories</div>
+        <div class="section-title">카테고리 선택</div>
+        <div class="section-desc">복수 선택 가능 · 선택한 카테고리 비율에 맞춰 10문제가 출제됩니다</div>
+        <div id="category-list" class="category-grid">
+            <p class="loading">카테고리를 불러오는 중...</p>
+        </div>
     </div>
 </div>
 
@@ -29,7 +32,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const startBtn = document.getElementById('start-btn');
     const errorMsg = document.getElementById('error-msg');
 
-    // 카테고리 로드
     fetch('/api/categories')
         .then(res => res.json())
         .then(categories => {
@@ -44,14 +46,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 </label>
             `).join('');
 
-            // 체크박스 변경 시 버튼 활성화
             categoryList.addEventListener('change', function() {
                 const checked = document.querySelectorAll('.category-checkbox:checked');
                 startBtn.disabled = checked.length === 0;
             });
         });
 
-    // 면접 시작
     startBtn.addEventListener('click', function() {
         const checked = document.querySelectorAll('.category-checkbox:checked');
         const categories = Array.from(checked).map(cb => cb.value);

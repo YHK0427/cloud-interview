@@ -1,20 +1,26 @@
 {% extends "base.html" %}
 
-{% block title %}면접 진행 - 클라우드 면접 연습{% endblock %}
+{% block title %}면접 진행 - Cloud Interview{% endblock %}
 
 {% block content %}
 <div class="interview-container">
-    <div class="progress-bar">
-        <div class="progress-fill" id="progress-fill"></div>
-    </div>
-    <div class="progress-text" id="progress-text">0 / 0</div>
-
-    <div class="question-section">
-        <span class="category-badge" id="category-badge"></span>
-        <h2 id="question-text" class="question-text">질문을 불러오는 중...</h2>
+    <div class="progress-wrapper">
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <div class="progress-text" id="progress-text">0 / 0</div>
     </div>
 
-    <div class="answer-section">
+    <div class="question-card card">
+        <div class="question-top">
+            <span class="category-badge" id="category-badge"></span>
+            <button id="reveal-btn" class="btn btn-ghost btn-sm">질문 텍스트 보기</button>
+        </div>
+        <div class="question-hidden-msg" id="question-hidden-msg">음성으로 질문을 들어주세요</div>
+        <h2 id="question-text" class="question-text" style="display:none;">질문을 불러오는 중...</h2>
+    </div>
+
+    <div class="answer-card card">
         <div class="btn-group">
             <button id="listen-btn" class="btn btn-listen">질문 듣기</button>
             <button id="record-btn" class="btn btn-record">답변하기</button>
@@ -25,15 +31,16 @@
             <span class="recording-dot"></span> 음성 인식 중...
         </div>
 
-        <div class="answer-box">
-            <h3>내 답변</h3>
-            <div id="answer-text" class="answer-text" contenteditable="true" placeholder="답변이 여기에 표시됩니다. 직접 입력도 가능합니다."></div>
-        </div>
+        <div class="answer-label">My Answer</div>
+        <div id="answer-text" class="answer-text" contenteditable="true" placeholder="답변이 여기에 표시됩니다. 직접 입력도 가능합니다."></div>
     </div>
 
-    <div id="result-section" class="result-section" style="display:none;">
+    <div id="result-section" class="result-card card" style="display:none;">
         <div class="model-answer-box">
-            <h3 class="collapsible" id="model-answer-toggle">모범 답안 ▼</h3>
+            <div class="collapsible" id="model-answer-toggle">
+                모범 답안
+                <span class="collapsible-icon">▼</span>
+            </div>
             <div id="model-answer-text" class="model-answer-text"></div>
         </div>
 
