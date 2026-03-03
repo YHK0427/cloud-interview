@@ -973,6 +973,130 @@ body::after {
     font-style: italic;
 }
 
+/* ===================== Markdown Content ===================== */
+.feedback-text h1,
+.feedback-text h2,
+.feedback-text h3,
+.md-content h1,
+.md-content h2,
+.md-content h3 {
+    font-family: 'Outfit', sans-serif;
+    color: var(--text-bright);
+    margin: 1rem 0 0.5rem;
+    line-height: 1.4;
+}
+
+.feedback-text h1:first-child,
+.feedback-text h2:first-child,
+.feedback-text h3:first-child,
+.md-content h1:first-child,
+.md-content h2:first-child,
+.md-content h3:first-child {
+    margin-top: 0;
+}
+
+.feedback-text h1,
+.md-content h1 {
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+.feedback-text h2,
+.md-content h2 {
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.feedback-text h3,
+.md-content h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #a78bfa;
+}
+
+.feedback-text p,
+.md-content p {
+    margin: 0.4rem 0;
+    line-height: 1.8;
+}
+
+.feedback-text strong,
+.md-content strong {
+    color: var(--text-bright);
+    font-weight: 600;
+}
+
+.feedback-text em,
+.md-content em {
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.feedback-text ul,
+.feedback-text ol,
+.md-content ul,
+.md-content ol {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+}
+
+.feedback-text li,
+.md-content li {
+    margin-bottom: 0.3rem;
+    line-height: 1.7;
+}
+
+.feedback-text li::marker,
+.md-content li::marker {
+    color: var(--accent);
+}
+
+.feedback-text hr,
+.md-content hr {
+    border: none;
+    border-top: 1px solid rgba(124, 111, 255, 0.15);
+    margin: 1rem 0;
+}
+
+.feedback-text code,
+.md-content code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    background: rgba(0, 212, 255, 0.08);
+    color: var(--accent);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    border: 1px solid rgba(0, 212, 255, 0.1);
+}
+
+.feedback-text pre,
+.md-content pre {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    margin: 0.8rem 0;
+    overflow-x: auto;
+}
+
+.feedback-text pre code,
+.md-content pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 0.82rem;
+    color: var(--text-primary);
+}
+
+.feedback-text blockquote,
+.md-content blockquote {
+    border-left: 3px solid #a78bfa;
+    margin: 0.8rem 0;
+    padding: 0.5rem 1rem;
+    background: rgba(124, 111, 255, 0.04);
+    color: var(--text-secondary);
+}
+
 /* ===================== Utility ===================== */
 .loading {
     text-align: center;

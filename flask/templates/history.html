@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         ${item.feedback ? `
                         <div class="detail-block feedback">
                             <div class="detail-block-label">AI 피드백</div>
-                            ${item.feedback.replace(/\n/g, '<br>')}
+                            <div class="md-content">${marked.parse(item.feedback)}</div>
                         </div>` : ''}
                     </div>
                 `).join('');

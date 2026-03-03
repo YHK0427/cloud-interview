@@ -85,6 +85,10 @@ function showQuestion() {
     } else {
         nextBtn.textContent = '다음 질문';
     }
+
+    // TTS 프리페치: 현재 질문 + 다음 질문을 백그라운드로 미리 로드
+    prefetchTTS(currentIndex);
+    prefetchTTS(currentIndex + 1);
 }
 
 // 질문 텍스트 토글
@@ -101,8 +105,27 @@ revealBtn.addEventListener('click', function() {
     }
 });
 
-// TTS - 질문 듣기 (Gemini TTS)
+// TTS - 프리페치 캐시 + 질문 듣기
 let ttsAudio = null;
+const ttsCache = {}; // index → Blob 캐시
+
+function prefetchTTS(index) {
+    if (index >= questions.length || ttsCache[index]) return;
+    ttsCache[index] = fetch('/api/tts', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({text: questions[index].question})
+    })
+    .then(res => {
+        if (!res.ok) throw new Error('TTS prefetch failed');
+        return res.blob();
+    })
+    .catch(err => {
+        console.error('TTS 프리페치 오류:', err);
+        delete ttsCache[index];
+        return null;
+    });
+}
 
 listenBtn.addEventListener('click', function() {
     // 이전 재생 중지
@@ -111,27 +134,37 @@ listenBtn.addEventListener('click', function() {
         ttsAudio = null;
     }
 
-    listenBtn.disabled = true;
-    listenBtn.textContent = '음성 생성 중...';
+    const idx = currentIndex;
 
-    fetch('/api/tts', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({text: questions[currentIndex].question})
-    })
-    .then(res => {
-        if (!res.ok) throw new Error('TTS 생성 실패');
-        return res.blob();
-    })
+    // 프리페치된 결과가 있으면 사용, 없으면 새로 요청
+    const blobPromise = ttsCache[idx] || (function() {
+        return fetch('/api/tts', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text: questions[idx].question})
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('TTS 생성 실패');
+            return res.blob();
+        });
+    })();
+
+    // 이미 로드 완료됐으면 즉시 재생, 아니면 로딩 표시
+    listenBtn.disabled = true;
+    listenBtn.textContent = '로딩 중...';
+
+    Promise.resolve(blobPromise)
     .then(blob => {
+        if (!blob) throw new Error('TTS 데이터 없음');
         const url = URL.createObjectURL(blob);
         ttsAudio = new Audio(url);
         ttsAudio.play();
-        listenBtn.textContent = '질문 듣기';
+        listenBtn.textContent = '재생 중...';
         listenBtn.disabled = false;
         ttsAudio.onended = () => {
             URL.revokeObjectURL(url);
             ttsAudio = null;
+            listenBtn.textContent = '질문 듣기';
         };
     })
     .catch(err => {
@@ -250,7 +283,7 @@ feedbackBtn.addEventListener('click', function() {
     })
     .then(res => res.json())
     .then(data => {
-        feedbackText.innerHTML = data.feedback.replace(/\n/g, '<br>');
+        feedbackText.innerHTML = marked.parse(data.feedback);
         feedbackText.style.display = 'block';
         feedbackBtn.textContent = '피드백 완료';
     })

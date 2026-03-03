@@ -1,5 +1,6 @@
 import io
 import os
+import hashlib
 import wave
 from google import genai
 from google.genai import types
@@ -8,6 +9,9 @@ from models import db, Question, Answer
 from services.gemini_service import get_feedback
 
 interview_bp = Blueprint('interview', __name__)
+
+# TTS 캐시 (질문 텍스트 해시 → WAV 바이트)
+_tts_cache = {}
 
 
 @interview_bp.route('/interview/<int:session_no>')
@@ -79,6 +83,13 @@ def text_to_speech():
     if not text:
         return jsonify({'error': '텍스트가 없습니다.'}), 400
 
+    # 캐시 키 생성
+    cache_key = hashlib.md5(text.encode('utf-8')).hexdigest()
+
+    # 캐시 히트 → 즉시 반환
+    if cache_key in _tts_cache:
+        return Response(_tts_cache[cache_key], mimetype='audio/wav')
+
     try:
         client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY', ''))
         response = client.models.generate_content(
@@ -102,7 +113,11 @@ def text_to_speech():
             wf.setsampwidth(2)
             wf.setframerate(24000)
             wf.writeframes(pcm_data)
-        buffer.seek(0)
-        return Response(buffer.read(), mimetype='audio/wav')
+        wav_bytes = buffer.getvalue()
+
+        # 캐시에 저장 (같은 질문 재요청 시 즉시 반환)
+        _tts_cache[cache_key] = wav_bytes
+
+        return Response(wav_bytes, mimetype='audio/wav')
     except Exception as e:
         return jsonify({'error': f'TTS 생성 실패: {str(e)}'}), 500

@@ -78,3 +78,17 @@ question,model_answer,category
 "레거시 시스템을 클라우드로 마이그레이션할 때 사용하는 6 R's 전략 중 Rehost와 Replatform의 차이는 무엇인가요?","Rehost(Lift and Shift)는 애플리케이션 변경 없이 VM 통째로 EC2 등으로 이전하는 방식이고, Replatform은 OS나 미들웨어, DB를 RDS나 Elastic Beanstalk 등 관리형 클라우드 서비스로 일부 변경하여 이전하는 전략입니다 [117-119].","클라우드 아키텍처"
 "재해 복구(DR) 패턴 중 파일럿 라이트(Pilot Light)와 웜 스탠바이(Warm Standby)의 차이는 무엇인가요?","파일럿 라이트는 DB 등 핵심 요소만 동기화하고 앱 서버는 축소 대기시켜 재해 시 확장해 RTO가 다소 긴 반면, 웜 스탠바이는 전체 스택을 축소된 상태로 항상 실행해 RTO가 훨씬 빠릅니다 [120].","클라우드 아키텍처"
 "클라우드 인프라 보안을 위한 다계층 방어(Defense in Depth)는 어떻게 구현할 수 있나요?","IAM을 통한 최소 권한 접근 제어, 프라이빗 서브넷 분리와 Security Group을 통한 네트워크 제어, KMS를 이용한 저장/전송 데이터 암호화, CloudTrail과 GuardDuty를 통한 지속적 모니터링을 상호 보완적으로 적용합니다 [121-123].","클라우드 아키텍처"
+
+
+
+
+ git commit -m "feat: 클라우드 면접 연습 웹앱 구현 \
+
+  - Docker Compose (MySQL 8.0 + Flask) 구성 \
+  - DB 스키마 2개 테이블 (questions, answers) + 초기 데이터 79문제 \
+  - 카테고리 복수 선택 → 비율 기반 10문제 출제 \
+  - Gemini 2.5 Flash TTS 음성 질문 (질문 텍스트 기본 숨김) \
+  - Web Speech API STT 음성 답변 \
+  - Gemini API AI 피드백 (점수/잘한점/부족한점/보완제안) \
+  - 회차별 히스토리 조회 \
+  - 다크 테마 UI"
