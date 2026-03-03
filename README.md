@@ -51,14 +51,50 @@ IT 인프라/클라우드 면접 연습 웹 애플리케이션
 
 ## 실행 방법
 
-### 1. 사전 준비
+### 방법 1. Docker Hub 이미지 사용 (권장)
 
-- Docker Desktop 설치 및 실행
-- [Google AI Studio](https://aistudio.google.com/)에서 Gemini API 키 발급
+소스 코드 없이 이미지만으로 바로 실행할 수 있습니다.
 
-### 2. 환경변수 설정
+**1) docker-compose.yml 작성**
 
-`.env` 파일을 프로젝트 루트에 생성:
+```yaml
+services:
+  mysql:
+    image: yhk0427/interview-mysql:latest
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  flask:
+    image: yhk0427/interview-flask:latest
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
+```
+
+**2) .env 파일 생성**
 
 ```env
 MYSQL_ROOT_PASSWORD=root
@@ -66,15 +102,32 @@ MYSQL_DATABASE=interview_db
 GEMINI_API_KEY=여기에_본인_API키_입력
 ```
 
-### 3. 실행
+> Gemini API 키는 [Google AI Studio](https://aistudio.google.com/)에서 무료 발급
+
+**3) 실행**
+
+```bash
+docker-compose up -d
+```
+
+**4) 접속**
+
+브라우저에서 `http://localhost:5000` 접속 (Chrome 권장 — STT 지원)
+
+---
+
+### 방법 2. 소스에서 직접 빌드
+
+```bash
+git clone https://github.com/YHK0427/cloud-interview.git
+cd cloud-interview
+```
+
+`.env` 파일을 프로젝트 루트에 생성 (위 방법 1의 .env 동일)
 
 ```bash
 docker-compose up --build
 ```
-
-### 4. 접속
-
-브라우저에서 `http://localhost:5000` 접속 (Chrome 권장 — STT 지원)
 
 ## 데이터베이스
 
