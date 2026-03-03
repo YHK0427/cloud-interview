@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}히스토리 - 클라우드 면접 연습{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>면접 히스토리</h1>
+    <p>과거 면접 연습 기록을 확인하세요</p>
+</div>
+
+<div id="history-list" class="history-list">
+    <p class="loading">히스토리를 불러오는 중...</p>
+</div>
+
+<div id="session-detail" class="session-detail" style="display:none;">
+    <button id="back-btn" class="btn btn-secondary">목록으로</button>
+    <h2 id="detail-title"></h2>
+    <div id="detail-content"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const historyList = document.getElementById('history-list');
+    const sessionDetail = document.getElementById('session-detail');
+    const backBtn = document.getElementById('back-btn');
+    const detailTitle = document.getElementById('detail-title');
+    const detailContent = document.getElementById('detail-content');
+
+    function loadHistory() {
+        historyList.style.display = 'block';
+        sessionDetail.style.display = 'none';
+
+        fetch('/api/history')
+            .then(res => res.json())
+            .then(sessions => {
+                if (sessions.length === 0) {
+                    historyList.innerHTML = '<p class="empty">아직 면접 기록이 없습니다.</p>';
+                    return;
+                }
+                historyList.innerHTML = sessions.map(s => `
+                    <div class="history-card" data-session="${s.session_no}">
+                        <div class="history-info">
+                            <h3>${s.session_no}회차</h3>
+                            <span class="history-date">${s.date}</span>
+                        </div>
+                        <span class="history-count">${s.question_count}문제</span>
+                    </div>
+                `).join('');
+
+                document.querySelectorAll('.history-card').forEach(card => {
+                    card.addEventListener('click', function() {
+                        loadSessionDetail(this.dataset.session);
+                    });
+                });
+            });
+    }
+
+    function loadSessionDetail(sessionNo) {
+        historyList.style.display = 'none';
+        sessionDetail.style.display = 'block';
+        detailTitle.textContent = `${sessionNo}회차 상세`;
+        detailContent.innerHTML = '<p class="loading">불러오는 중...</p>';
+
+        fetch(`/api/history/${sessionNo}`)
+            .then(res => res.json())
+            .then(items => {
+                detailContent.innerHTML = items.map((item, i) => `
+                    <div class="detail-card">
+                        <div class="detail-header">
+                            <span class="detail-num">Q${i + 1}</span>
+                            <span class="category-badge">${item.category}</span>
+                        </div>
+                        <div class="detail-question">
+                            <strong>질문:</strong> ${item.question}
+                        </div>
+                        <div class="detail-answer">
+                            <strong>내 답변:</strong> ${item.user_answer || '<span class="no-answer">답변 없음</span>'}
+                        </div>
+                        <div class="detail-model">
+                            <strong>모범 답안:</strong> ${item.model_answer}
+                        </div>
+                        ${item.feedback ? `<div class="detail-feedback"><strong>피드백:</strong><div class="feedback-content">${item.feedback.replace(/\n/g, '<br>')}</div></div>` : ''}
+                    </div>
+                `).join('');
+            });
+    }
+
+    backBtn.addEventListener('click', loadHistory);
+    loadHistory();
+});
+</script>
+{% endblock %}

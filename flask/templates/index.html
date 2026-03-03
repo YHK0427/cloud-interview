@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}면접 시작 - 클라우드 면접 연습{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>클라우드 면접 연습</h1>
+    <p>카테고리를 선택하고 면접을 시작하세요</p>
+</div>
+
+<div class="category-section">
+    <h2>카테고리 선택</h2>
+    <p class="hint">복수 선택 가능 - 선택한 카테고리 비율에 맞춰 10문제가 출제됩니다</p>
+    <div id="category-list" class="category-grid">
+        <p class="loading">카테고리를 불러오는 중...</p>
+    </div>
+</div>
+
+<div class="start-section">
+    <button id="start-btn" class="btn btn-primary btn-lg" disabled>면접 시작</button>
+    <p id="error-msg" class="error-msg" style="display:none;"></p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const categoryList = document.getElementById('category-list');
+    const startBtn = document.getElementById('start-btn');
+    const errorMsg = document.getElementById('error-msg');
+
+    // 카테고리 로드
+    fetch('/api/categories')
+        .then(res => res.json())
+        .then(categories => {
+            if (categories.length === 0) {
+                categoryList.innerHTML = '<p class="empty">등록된 질문이 없습니다. DB에 질문을 추가해주세요.</p>';
+                return;
+            }
+            categoryList.innerHTML = categories.map(cat => `
+                <label class="category-card">
+                    <input type="checkbox" value="${cat}" class="category-checkbox">
+                    <span class="category-name">${cat}</span>
+                </label>
+            `).join('');
+
+            // 체크박스 변경 시 버튼 활성화
+            categoryList.addEventListener('change', function() {
+                const checked = document.querySelectorAll('.category-checkbox:checked');
+                startBtn.disabled = checked.length === 0;
+            });
+        });
+
+    // 면접 시작
+    startBtn.addEventListener('click', function() {
+        const checked = document.querySelectorAll('.category-checkbox:checked');
+        const categories = Array.from(checked).map(cb => cb.value);
+
+        startBtn.disabled = true;
+        startBtn.textContent = '문제 세팅 중...';
+        errorMsg.style.display = 'none';
+
+        fetch('/api/start', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({categories: categories})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) {
+                errorMsg.textContent = data.error;
+                errorMsg.style.display = 'block';
+                startBtn.disabled = false;
+                startBtn.textContent = '면접 시작';
+                return;
+            }
+            window.location.href = `/interview/${data.session_no}`;
+        })
+        .catch(err => {
+            errorMsg.textContent = '오류가 발생했습니다: ' + err.message;
+            errorMsg.style.display = 'block';
+            startBtn.disabled = false;
+            startBtn.textContent = '면접 시작';
+        });
+    });
+});
+</script>
+{% endblock %}
