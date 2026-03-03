@@ -565,6 +565,39 @@ body::after {
     margin-bottom: 0.6rem;
 }
 
+/* TTS 로딩 배너 */
+.tts-loading-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.8rem 1.2rem;
+    margin-bottom: 1rem;
+    background: rgba(0, 212, 255, 0.06);
+    border: 1px solid rgba(0, 212, 255, 0.15);
+    border-radius: var(--radius-md);
+    color: var(--accent);
+    font-size: 0.85rem;
+    font-weight: 500;
+    animation: fadeUp 0.4s ease-out;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.tts-loading-banner.hidden {
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
+}
+
+.tts-loading-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(0, 212, 255, 0.2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+}
+
 .question-card::before {
     content: '';
     position: absolute;

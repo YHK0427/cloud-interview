@@ -108,9 +108,19 @@ revealBtn.addEventListener('click', function() {
 // TTS - 프리페치 캐시 + 질문 듣기
 let ttsAudio = null;
 const ttsCache = {}; // index → Blob 캐시
+let ttsReady = false;
+const ttsBanner = document.getElementById('tts-loading-banner');
 
-function prefetchTTS(index) {
+function hideTTSBanner() {
+    if (!ttsReady) {
+        ttsReady = true;
+        ttsBanner.classList.add('hidden');
+    }
+}
+
+function prefetchTTS(index, retryCount) {
     if (index >= questions.length || ttsCache[index]) return;
+    const retry = retryCount || 0;
     ttsCache[index] = fetch('/api/tts', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -120,9 +130,17 @@ function prefetchTTS(index) {
         if (!res.ok) throw new Error('TTS prefetch failed');
         return res.blob();
     })
+    .then(blob => {
+        hideTTSBanner();
+        return blob;
+    })
     .catch(err => {
         console.error('TTS 프리페치 오류:', err);
         delete ttsCache[index];
+        // 모델 로딩 중일 수 있으므로 최대 5회 재시도 (5초 간격)
+        if (retry < 5) {
+            setTimeout(() => prefetchTTS(index, retry + 1), 5000);
+        }
         return null;
     });
 }
@@ -156,6 +174,7 @@ listenBtn.addEventListener('click', function() {
     Promise.resolve(blobPromise)
     .then(blob => {
         if (!blob) throw new Error('TTS 데이터 없음');
+        hideTTSBanner();
         const url = URL.createObjectURL(blob);
         ttsAudio = new Audio(url);
         ttsAudio.play();
@@ -169,8 +188,17 @@ listenBtn.addEventListener('click', function() {
     })
     .catch(err => {
         console.error('TTS 오류:', err);
-        listenBtn.textContent = '질문 듣기';
-        listenBtn.disabled = false;
+        if (!ttsReady) {
+            listenBtn.textContent = '모델 준비 중...';
+            // 3초 후 버튼 텍스트 복원
+            setTimeout(() => {
+                listenBtn.textContent = '질문 듣기';
+                listenBtn.disabled = false;
+            }, 3000);
+        } else {
+            listenBtn.textContent = '질문 듣기';
+            listenBtn.disabled = false;
+        }
     });
 });
 

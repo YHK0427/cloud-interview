@@ -1,17 +1,17 @@
-import io
-import os
+import asyncio
 import hashlib
-import wave
-from google import genai
-from google.genai import types
+import edge_tts
 from flask import Blueprint, render_template, request, jsonify, Response
 from models import db, Question, Answer
 from services.gemini_service import get_feedback
 
 interview_bp = Blueprint('interview', __name__)
 
-# TTS 캐시 (질문 텍스트 해시 → WAV 바이트)
+# TTS 캐시 (질문 텍스트 해시 → MP3 바이트)
 _tts_cache = {}
+
+# edge-tts 한국어 음성
+EDGE_TTS_VOICE = 'ko-KR-SunHiNeural'
 
 
 @interview_bp.route('/interview/<int:session_no>')
@@ -88,36 +88,22 @@ def text_to_speech():
 
     # 캐시 히트 → 즉시 반환
     if cache_key in _tts_cache:
-        return Response(_tts_cache[cache_key], mimetype='audio/wav')
+        return Response(_tts_cache[cache_key], mimetype='audio/mpeg')
 
     try:
-        client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY', ''))
-        response = client.models.generate_content(
-            model='gemini-2.5-flash-preview-tts',
-            contents=text,
-            config=types.GenerateContentConfig(
-                response_modalities=['AUDIO'],
-                speech_config=types.SpeechConfig(
-                    voice_config=types.VoiceConfig(
-                        prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                            voice_name='Kore',
-                        )
-                    )
-                ),
-            )
-        )
-        pcm_data = response.candidates[0].content.parts[0].inline_data.data
-        buffer = io.BytesIO()
-        with wave.open(buffer, 'wb') as wf:
-            wf.setnchannels(1)
-            wf.setsampwidth(2)
-            wf.setframerate(24000)
-            wf.writeframes(pcm_data)
-        wav_bytes = buffer.getvalue()
+        async def _generate():
+            communicate = edge_tts.Communicate(text, EDGE_TTS_VOICE)
+            audio_data = b''
+            async for chunk in communicate.stream():
+                if chunk['type'] == 'audio':
+                    audio_data += chunk['data']
+            return audio_data
+
+        mp3_bytes = asyncio.run(_generate())
 
         # 캐시에 저장 (같은 질문 재요청 시 즉시 반환)
-        _tts_cache[cache_key] = wav_bytes
+        _tts_cache[cache_key] = mp3_bytes
 
-        return Response(wav_bytes, mimetype='audio/wav')
+        return Response(mp3_bytes, mimetype='audio/mpeg')
     except Exception as e:
         return jsonify({'error': f'TTS 생성 실패: {str(e)}'}), 500

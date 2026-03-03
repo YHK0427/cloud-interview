@@ -9,7 +9,7 @@ IT 인프라/클라우드 면접 연습 웹 애플리케이션
 ## 주요 기능
 
 - **카테고리 기반 문제 출제** — 네트워크(1~4계층), 웹/HTTP, 도커, 쿠버네티스, 클라우드 아키텍처 등 카테고리를 복수 선택하면 비율에 맞춰 10문제 출제
-- **음성 면접** — Gemini TTS로 질문을 읽어주고, Web Speech API(STT)로 답변을 음성 인식 (질문 텍스트는 기본 숨김, 실제 면접처럼 음성으로만 진행)
+- **음성 면접** — edge-tts(MS Neural 음성)로 질문을 읽어주고, Web Speech API(STT)로 답변을 음성 인식 (질문 텍스트는 기본 숨김, 실제 면접처럼 음성으로만 진행)
 - **AI 피드백** — 답변 완료 후 모범 답안 확인 + Gemini API로 점수/잘한 점/부족한 점/보완 제안 피드백 생성
 - **히스토리** — 회차별 면접 기록(질문, 내 답변, 모범 답안, 피드백) 조회
 
@@ -20,7 +20,7 @@ IT 인프라/클라우드 면접 연습 웹 애플리케이션
 | Backend | Flask, SQLAlchemy |
 | Frontend | Jinja2, Vanilla JS |
 | Database | MySQL 8.0 |
-| TTS | Gemini 2.5 Flash TTS |
+| TTS | edge-tts (ko-KR-SunHiNeural) |
 | STT | Web Speech API (Chrome) |
 | AI 피드백 | Gemini 2.5 Flash |
 | Infra | Docker Compose |
