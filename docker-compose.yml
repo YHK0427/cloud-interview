@@ -1,9 +1,7 @@
 services:
   mysql:
-    image: mysql:8.0
-    container_name: interview-mysql
+    image: yhk0427/interview-mysql:latest
     restart: always
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -11,17 +9,14 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./mysql/01_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
-      - ./mysql/02_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
       interval: 10s
       timeout: 5s
       retries: 5
 
   flask:
-    build: ./flask
-    container_name: interview-flask
+    image: yhk0427/interview-flask:latest
     restart: always
     ports:
       - "5000:5000"
@@ -31,8 +26,6 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
-    volumes:
-      - ./flask:/app
     depends_on:
       mysql:
         condition: service_healthy
