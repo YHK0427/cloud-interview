@@ -1,6 +1,10 @@
 ALTER DATABASE interview_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE interview_db;
 
+-- Docker 네트워크에서 Flask 컨테이너가 접속할 수 있도록 root 원격 허용
+GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
+FLUSH PRIVILEGES;
+
 CREATE TABLE IF NOT EXISTS questions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     question TEXT NOT NULL,

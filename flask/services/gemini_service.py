@@ -8,6 +8,10 @@ GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini
 
 def get_feedback(question, model_answer, user_answer):
     api_key = os.environ.get('GEMINI_API_KEY', '')
+    key_file = os.environ.get('GEMINI_API_KEY_FILE', '')
+    if key_file:
+        with open(key_file, 'r') as f:
+            api_key = f.read().strip()
     if not api_key:
         return '피드백을 생성할 수 없습니다. GEMINI_API_KEY가 설정되지 않았습니다.'
 

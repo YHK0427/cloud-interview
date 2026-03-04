@@ -15,3 +15,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+    _key_file = os.environ.get('GEMINI_API_KEY_FILE', '')
+    if _key_file:
+        with open(_key_file, 'r') as f:
+            GEMINI_API_KEY = f.read().strip()
