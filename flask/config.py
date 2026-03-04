@@ -4,8 +4,8 @@ import os
 class Config:
     MYSQL_HOST = os.environ.get('MYSQL_HOST', 'localhost')
     MYSQL_PORT = os.environ.get('MYSQL_PORT', '3306')
-    MYSQL_USER = 'root'
-    MYSQL_PASSWORD = os.environ.get('MYSQL_ROOT_PASSWORD', 'root')
+    MYSQL_USER = os.environ.get('MYSQL_USER', 'interview')
+    MYSQL_PASSWORD = os.environ.get('MYSQL_PASSWORD', 'interview')
     MYSQL_DB = os.environ.get('MYSQL_DATABASE', 'interview_db')
 
     SQLALCHEMY_DATABASE_URI = (
