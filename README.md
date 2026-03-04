@@ -249,8 +249,7 @@ kubernetes/
 ├── resourceQuota/
 │   └── namespace_rs.yaml              # CPU 1.5 / Mem 2.5Gi
 └── traefik/
-    ├── traefik-values.yaml            # Helm values (gitignored)
-    └── traefik-values.yaml.ex         # 예시 파일
+    └── traefik-values.yaml            # Helm values (gitignored)
 ```
 
 ### 주요 설계
