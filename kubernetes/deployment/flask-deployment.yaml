@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: flask
+  template:
+    metadata:
+      labels:
+        app: flask
+    spec:
+      serviceAccountName: flask-sa
+      containers:
+      - name: flask-container
+        image: yhk0427/interview-flask:1.1
+        ports:
+        - containerPort: 5000
+        envFrom:
+        - configMapRef:
+            name: flask-config
+        env:
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: flask-secret
+              key: MYSQL_USER
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: flask-secret
+              key: MYSQL_PASSWORD
+        - name: GEMINI_API_KEY_FILE
+          value: /etc/secrets/GEMINI_API_KEY
+        volumeMounts:
+        - name: flask-secret
+          mountPath: /etc/secrets
+          readOnly: true
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+          limits:
+            cpu: "250m"
+            memory: "512Mi"
+      volumes:
+        - name: flask-secret
+          secret:
+            secretName: flask-secret

@@ -3,4 +3,9 @@ __pycache__/
 *.pyc
 .claude/
 .playwright-mcp/
+docs/k8s-architecture.html
 
+kubernetes/secret_configmap/flask-configmap-secret.yaml
+kubernetes/secret_configmap/mysql-configmap-secret.yaml
+kubernetes/Gateway/tls.crt
+kubernetes/Gateway/tls.key

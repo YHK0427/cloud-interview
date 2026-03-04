@@ -204,3 +204,111 @@ INSERT INTO questions (question, model_answer, category) VALUES
 각 회차를 클릭하면 질문별 내 답변, 모범 답안, AI 피드백을 다시 확인할 수 있습니다.
 
 ![히스토리 상세](docs/images/08-history-detail.png)
+
+---
+
+## Kubernetes 배포
+
+Docker Compose 환경에서 AKS(Azure Kubernetes Service)로 마이그레이션하였습니다.
+
+### 아키텍처 구조도
+
+![초기 구조도 (손그림)](docs/images/쿠버네티스%20초기%20구조도.jpg)
+
+![Kubernetes 아키텍처](docs/images/kubernetes%20구조도.jpeg)
+
+### K8s 매니페스트 구조
+
+```
+kubernetes/
+├── deployment/
+│   ├── flask-deployment.yaml          # Flask Deployment (Burstable, 2 replicas)
+│   └── mysql-deployment.yaml          # MySQL Deployment (Guaranteed, 1 replica)
+├── svc/
+│   ├── flask-svc.yaml                 # ClusterIP :5000
+│   └── mysql-svc.yaml                 # ClusterIP :3306
+├── secret_configmap/
+│   ├── flask-configmap-secret.yaml    # Flask 환경변수 + Secret (gitignored)
+│   ├── mysql-configmap-secret.yaml    # MySQL 환경변수 + Secret (gitignored)
+│   ├── flask-configmap-secret.yaml.ex # 예시 파일
+│   └── mysql-configmap-secret.yaml.ex # 예시 파일
+├── volume/
+│   └── pvc.yaml                       # MySQL PVC 5Gi (managed-csi)
+├── Gateway/
+│   ├── gateway.yaml                   # Traefik Gateway (HTTP/HTTPS)
+│   ├── httproute.yaml                 # HTTPRoute: /* → flask:5000
+│   ├── tls.crt / tls.key              # 자체 서명 인증서 (gitignored)
+│   └── tls.crt.ex / tls.key.ex        # 예시 파일
+├── networkPolicy/
+│   ├── default-deny.yaml              # 기본 전체 차단
+│   ├── flask-policy.yaml              # Flask 허용 규칙
+│   ├── mysql-policy.yaml              # MySQL 허용 규칙
+│   └── traefik-policy.yaml            # Traefik 허용 규칙
+├── RBAC/
+│   └── rbac.yaml                      # ServiceAccount (flask-sa, mysql-sa)
+├── resourceQuota/
+│   └── namespace_rs.yaml              # CPU 1.5 / Mem 2.5Gi
+└── traefik/
+    ├── traefik-values.yaml            # Helm values (gitignored)
+    └── traefik-values.yaml.ex         # 예시 파일
+```
+
+### 주요 설계
+
+| 항목 | 구성 |
+|------|------|
+| Gateway | Traefik + Gateway API, 자체 서명 TLS |
+| Flask QoS | Burstable — CPU 200~250m, Mem 256~512Mi, 2 replicas |
+| MySQL QoS | Guaranteed — CPU 500m, Mem 1Gi (고정), 1 replica |
+| Secret 관리 | MYSQL_USER/PASSWORD → env, GEMINI_API_KEY → 파일 볼륨 마운트 (/etc/secrets) |
+| NetworkPolicy | default-deny + 서비스별 화이트리스트 |
+| RBAC | 전용 ServiceAccount, automountServiceAccountToken: false |
+| 이미지 | yhk0427/interview-flask:1.1, yhk0427/interview-mysql:1.1 (multi-arch: amd64 + arm64) |
+
+---
+
+## Kubernetes 트러블슈팅
+
+### 1. ResourceQuota 리소스 관리
+
+Namespace에 ResourceQuota(CPU 1, Mem 2Gi)를 설정한 뒤 가장 많이 해맸던 부분이다.
+
+**문제 상황:**
+- Flask를 2개 replicas로 배포했더니 CPU limits 합계가 Quota 전체를 소진해버림. pod 하나 당 limit을 잡아 먹는다는 사실을 망갹
+- MySQL Pod가 스케줄링되지 않고, PVC도 계속 Pending 상태. MySql deploy를 나중에 띄워서 환경변수 문제인건지 무엇이 문제인건지 매우 헷갈렸었음. 하지만 위가 이유가 됨
+- Traefik을 Helm으로 설치했는데, Helm 차트에 resource limits가 없어서 `must specify limits` 에러로 Pod 생성이 안됨
+
+
+**해결 과정:**
+1. 전체 Quota를 CPU 1.5 / Mem 2.5Gi로 상향
+2. Flask를 Burstable로 변경 — requests/limits 차이를 두어 리소스 절약 (CPU 200~250m, Mem 256~512Mi)
+3. MySQL은 Guaranteed 유지 — DB 안정성을 위해 requests = limits 고정 (CPU 500m, Mem 1Gi)
+4. Traefik Helm values에 resource limits 직접 추가
+5. 전체 합산이 Quota 를 명확히 메모해두고 설계
+
+**배운 점:**
+- ResourceQuota가 걸린 Namespace에서는 모든 컨테이너에 requests/limits가 필수
+- 설계 시점에서 리소스 또한 모두 정해놓고 할 것
+
+### 2. NetworkPolicy egress에서 DNS(port 53) 누락
+
+default-deny NetworkPolicy를 적용하고 서비스별로 허용 규칙을 하나씩 추가하는 방식으로 진행. 
+
+**문제 상황:**
+- Flask에서 외부 API(Gemini, Edge TTS) 호출을 위해 egress에 443 포트를 허용
+- 적용 후에도 외부 API 연결이 계속 실패
+- 이전 서비스를 loadbalancer로 기능 테스트 해보았을 때는 되었어서 내부적 안의 문제일거라 판단하게 화근이였음
+
+**원인:**
+- 외부 호출하면 DNS 이름 해석이 먼저 일어나는데, egress에 UDP(53번포트)를 허용하지 않아서 도메인 해석을 아예 못함
+- 443을 열어도 도메인을 IP로 변환할 수가 없으니 api 사용이 제한됨
+
+**해결:**
+
+- flask-policy.yaml egress 규칙에 DNS 허용 추가
+
+
+**배운 점:**
+- 외부 api를 사용하는 경우 NetworkPolicy에서 egress를 제한할 때 DNS(53) 무조건 열어줄 것
+- "443 열었는데 왜 안 되지?" 싶으면 DNS부터 의심할 것
+- ingress, egress가 안될 때 조금 더 다각화된 시선으로 트러블 슈팅을 할 수 있을 것 같음

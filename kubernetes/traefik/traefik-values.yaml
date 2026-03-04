@@ -1,0 +1,27 @@
+providers:
+  kubernetesGateway:
+    enabled: true
+gateway:
+  listeners:
+    web:
+      port: 8000
+      protocol: HTTP
+    websecure:
+      port: 8443
+      protocol: HTTPS
+      certificateRefs:
+        - name: interview-tls
+ports:
+  web:
+    port: 8000
+    exposedPort: 80
+  websecure:
+    port: 8443
+    exposedPort: 443
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
